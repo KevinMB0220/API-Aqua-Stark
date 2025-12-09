@@ -10,3 +10,4 @@ CREATE TABLE IF NOT EXISTS fish (
 );
 
 CREATE INDEX IF NOT EXISTS idx_fish_owner ON fish(owner);
+
