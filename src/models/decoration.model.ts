@@ -19,7 +19,6 @@ export interface DecorationOnChain {
   id: number;
   owner: string;
   kind: DecorationKind;
-  // XP bonus percentage (e.g., 10 = +10%)
   xp_multiplier: number;
 }
 
