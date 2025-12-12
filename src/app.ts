@@ -48,7 +48,7 @@ export async function startServer(app: FastifyInstance): Promise<void> {
     
     // Clear console and display beautiful banner
     console.clear();
-    displayServerBanner();
+    await displayServerBanner();
     
     // Also log for production environments
     if (NODE_ENV === 'production') {
