@@ -21,6 +21,15 @@ export interface Fish extends FishOnChain, Omit<FishOffChain, 'id'> {
   id: number;
 }
 
+/**
+ * Summary of fish data without on-chain information.
+ * Used for lists where full on-chain data is not needed.
+ * For complete fish data, use the Fish interface or GET /api/fish/:id endpoint.
+ */
+export interface FishSummary extends FishOffChain {
+  id: number;
+}
+
 export interface CreateFishDto {
   id: number;
   owner: string;
