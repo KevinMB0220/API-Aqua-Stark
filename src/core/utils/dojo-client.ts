@@ -18,6 +18,7 @@ import {
   DecorationKind,
   MintTankResult,
   MintFishResult,
+  FishOnChain,
 } from '../types';
 
 // Flag to track if client is initialized
@@ -383,6 +384,33 @@ export async function getFishFamilyTree(fishId: number): Promise<FishFamilyTree>
 
   logInfo(`Fish family tree retrieved (stub): fish=${fishId}, generations=${familyTree.generation_count}`);
   return familyTree;
+}
+
+/**
+ * Gets fish data from on-chain.
+ * STUB: Returns mock fish data.
+ * 
+ * @param fishId - ID of the fish
+ * @returns FishOnChain data
+ */
+export async function getFishOnChain(fishId: number): Promise<FishOnChain> {
+  logDebug(`[STUB] getFishOnChain called with fishId: ${fishId}`);
+  
+  // TODO: Replace with real Dojo contract call
+  // const result = await contract.call('get_fish', [fishId]);
+  
+  // Mock data
+  const fishOnChain: FishOnChain = {
+    id: fishId,
+    xp: 100, // Mock XP
+    state: 'Adult',
+    hunger: 50, // 0-100
+    isReadyToBreed: true,
+    dna: generateRandomDna(),
+  };
+
+  logInfo(`Fish on-chain data retrieved (stub): fish=${fishId}`);
+  return fishOnChain;
 }
 
 // ============================================================================
