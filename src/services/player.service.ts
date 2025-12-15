@@ -9,7 +9,7 @@
 // IMPORTS
 // ============================================================================
 
-import { ValidationError, OnChainError, ConflictError } from '@/core/errors';
+import { ValidationError, NotFoundError, OnChainError, ConflictError } from '@/core/errors';
 import { getSupabaseClient } from '@/core/utils/supabase-client';
 import { logError } from '@/core/utils/logger';
 import {
@@ -451,6 +451,57 @@ export class PlayerService {
         `Rollback attempted.`
       );
     }
+  }
+
+  // ============================================================================
+  // PLAYER RETRIEVAL
+  // ============================================================================
+
+  /**
+   * Retrieves a player by their Starknet address.
+   * 
+   * @param address - Starknet wallet address
+   * @returns Player data
+   * @throws ValidationError if address is invalid
+   * @throws NotFoundError if player doesn't exist
+   */
+  async getPlayerByAddress(address: string): Promise<Player> {
+    // Validate address
+    if (!address || address.trim().length === 0) {
+      throw new ValidationError('Address is required');
+    }
+
+    // Basic Starknet address format validation (starts with 0x and is hex)
+    const addressPattern = /^0x[a-fA-F0-9]{63,64}$/;
+    if (!addressPattern.test(address.trim())) {
+      throw new ValidationError('Invalid Starknet address format');
+    }
+
+    const supabase = getSupabaseClient();
+
+    // Query Supabase
+    const { data, error } = await supabase
+      .from('players')
+      .select('*')
+      .eq('address', address.trim())
+      .single();
+
+    // Handle Supabase errors
+    if (error) {
+      // Supabase returns error when no rows found
+      if (error.code === 'PGRST116') {
+        throw new NotFoundError(`Player with address ${address} not found`);
+      }
+      // Other database errors
+      throw new Error(`Database error: ${error.message}`);
+    }
+
+    // Double check data exists
+    if (!data) {
+      throw new NotFoundError(`Player with address ${address} not found`);
+    }
+
+    return this.mapSupabaseToPlayer(data);
   }
 
   // ============================================================================
