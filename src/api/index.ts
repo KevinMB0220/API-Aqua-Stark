@@ -8,6 +8,7 @@
 import type { FastifyInstance } from 'fastify';
 import { authRoutes } from '@/api/auth.routes';
 import { playerRoutes } from '@/api/player.routes';
+import { fishRoutes } from '@/api/fish.routes';
 
 /**
  * Registers all API routes with the Fastify instance.
@@ -18,7 +19,7 @@ export async function registerRoutes(app: FastifyInstance): Promise<void> {
   // Register route modules here
   await app.register(authRoutes, { prefix: '/api' });
   await app.register(playerRoutes, { prefix: '/api' });
-  // await app.register(fishRoutes, { prefix: '/api/fish' });
+  await app.register(fishRoutes, { prefix: '/api' });
 
   // Placeholder route for testing
   app.get('/api', async () => {
