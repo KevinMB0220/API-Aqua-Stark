@@ -7,6 +7,7 @@
 import type { FastifyRequest, FastifyReply } from 'fastify';
 import type { ControllerResponse } from '@/core/types/controller-response';
 import { createSuccessResponse, createErrorResponse } from '@/core/responses';
+import { ValidationError } from '@/core/errors';
 import { DecorationService } from '@/services/decoration.service';
 import type { Decoration } from '@/models/decoration.model';
 
@@ -31,7 +32,7 @@ export async function getDecorationById(
     
     // Basic validation before service call (service does stricter validation)
     if (isNaN(decorationId)) {
-      throw new Error('Invalid decoration ID format');
+      throw new ValidationError('Invalid decoration ID format');
     }
 
     const decoration = await decorationService.getDecorationById(decorationId);

@@ -573,7 +573,7 @@ export async function getDecorationOnChain(decorationId: number): Promise<Decora
   // Mock data
   const decorationOnChain: DecorationOnChain = {
     id: decorationId,
-    owner: '0x0000000000000000000000000000000000000000000000000000000000000000', // Mock owner address
+    owner: '0x1234567890abcdef1234567890abcdef1234567890abcdef1234567890abcdef', // Mock owner address
     kind: DecorationKind.Plant, // Default kind
     xp_multiplier: 1.25, // Mock XP multiplier (1.0 = no bonus, 1.25 = 25% bonus)
   };
