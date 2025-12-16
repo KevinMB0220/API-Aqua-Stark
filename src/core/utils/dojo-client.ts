@@ -20,6 +20,7 @@ import {
   MintFishResult,
   FishOnChain,
   TankOnChain,
+  DecorationOnChain,
 } from '../types';
 
 // Flag to track if client is initialized
@@ -554,4 +555,29 @@ export async function deactivateDecoration(id: number): Promise<string> {
   const result = createMockTransactionResult();
   logInfo(`Decoration deactivated (stub): id=${id}, tx: ${result.tx_hash}`);
   return result.tx_hash;
+}
+
+/**
+ * Gets decoration data from on-chain.
+ * STUB: Returns mock decoration data.
+ * 
+ * @param decorationId - ID of the decoration
+ * @returns DecorationOnChain data
+ */
+export async function getDecorationOnChain(decorationId: number): Promise<DecorationOnChain> {
+  logDebug(`[STUB] getDecorationOnChain called with decorationId: ${decorationId}`);
+  
+  // TODO: Replace with real Dojo contract call
+  // const result = await contract.call('get_decoration', [decorationId]);
+  
+  // Mock data
+  const decorationOnChain: DecorationOnChain = {
+    id: decorationId,
+    owner: '0x0000000000000000000000000000000000000000000000000000000000000000', // Mock owner address
+    kind: DecorationKind.Plant, // Default kind
+    xp_multiplier: 1.25, // Mock XP multiplier (1.0 = no bonus, 1.25 = 25% bonus)
+  };
+
+  logInfo(`Decoration on-chain data retrieved (stub): decoration=${decorationId}`);
+  return decorationOnChain;
 }
