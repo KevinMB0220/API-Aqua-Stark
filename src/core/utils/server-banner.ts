@@ -36,9 +36,26 @@ export async function displayServerBanner(): Promise<void> {
 🌍  Network URL:       ${networkUrl}
 
 📋  Available Endpoints:
-   • GET  /health          Health check
-   • GET  /api             API info
-   • POST /api/auth/login  Player login/registration
+   
+   General:
+   • GET  /health                        Health check
+   • GET  /api                           API info
+   
+   Authentication:
+   • POST /api/auth/login                Player login/registration
+   
+   Players:
+   • GET  /api/player/:address           Get player by address
+   
+   Fish:
+   • GET  /api/fish/:id                  Get fish details by ID
+   • GET  /api/player/:address/fish      Get all fish owned by a player
+   
+   Tanks:
+   • GET  /api/tank/:id                  Get tank details by ID
+   
+   Decorations:
+   • GET  /api/decoration/:id            Get decoration details by ID
 
 ⏰  Started at:        ${startTime}
   `;
