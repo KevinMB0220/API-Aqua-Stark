@@ -5,7 +5,7 @@
  */
 
 import type { FastifyInstance, FastifyPluginOptions } from 'fastify';
-import { getFishById } from '@/controllers/fish.controller';
+import { getFishById, getFishByOwner } from '@/controllers/fish.controller';
 
 /**
  * Registers fish routes with the Fastify instance.
@@ -19,5 +19,8 @@ export async function fishRoutes(
 ): Promise<void> {
   // GET /fish/:id - Get fish details by ID
   app.get('/fish/:id', getFishById);
+
+  // GET /player/:address/fish - Get all fish owned by a player
+  app.get('/player/:address/fish', getFishByOwner);
 }
 
