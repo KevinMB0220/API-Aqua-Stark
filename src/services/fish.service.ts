@@ -13,7 +13,7 @@ import { ValidationError, NotFoundError, OnChainError } from '@/core/errors';
 import { getSupabaseClient } from '@/core/utils/supabase-client';
 import { logError } from '@/core/utils/logger';
 import { getFishOnChain, feedFishBatch } from '@/core/utils/dojo-client';
-import { getActiveDecorationsMultiplier } from '@/core/utils/xp-calculator';
+import { getActiveDecorationsMultiplier, getFeedBaseXp } from '@/core/utils/xp-calculator';
 import type { Fish } from '@/models/fish.model';
 
 // ============================================================================
@@ -326,6 +326,10 @@ export class FishService {
     }
     // If tankId is null, multiplierPercentage remains 0 (no active decorations)
     // multiplierPercentage will be used in the next steps to calculate final XP
+
+    // Get base XP for feeding (currently using default, but can be extended to support food types)
+    // TODO: In the future, this can accept a foodType parameter from the request
+    const baseXp = getFeedBaseXp(); // Defaults to FoodType.Basic (10 XP)
 
     // Call on-chain feed_fish_batch function
     // This updates XP, last_fed_at, applies XP multipliers, and handles state changes
