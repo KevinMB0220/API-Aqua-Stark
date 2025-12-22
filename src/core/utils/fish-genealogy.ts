@@ -61,7 +61,6 @@ export async function buildFishFamilyTree(fishId: number): Promise<FishFamilyTre
   
   // Recursive function to fetch ancestors
   async function fetchAncestors(
-    currentId: number, 
     p1Id: number | null, 
     p2Id: number | null, 
     generation: number
@@ -92,7 +91,7 @@ export async function buildFishFamilyTree(fishId: number): Promise<FishFamilyTre
           generation: generation
         });
         
-        await fetchAncestors(p1.id, p1.parent1_id, p1.parent2_id, generation + 1);
+        await fetchAncestors(p1.parent1_id, p1.parent2_id, generation + 1);
       }
     }
 
@@ -118,13 +117,13 @@ export async function buildFishFamilyTree(fishId: number): Promise<FishFamilyTre
           generation: generation
         });
         
-        await fetchAncestors(p2.id, p2.parent1_id, p2.parent2_id, generation + 1);
+        await fetchAncestors(p2.parent1_id, p2.parent2_id, generation + 1);
       }
     }
   }
 
   // Start ancestor recursion from generation 1 (parents)
-  await fetchAncestors(fishId, rootFish.parent1_id, rootFish.parent2_id, 1);
+  await fetchAncestors(rootFish.parent1_id, rootFish.parent2_id, 1);
 
   // 3. Build descendants tree (Downwards)
   // Clear visited set for descendants traversal (except root) to act independently
