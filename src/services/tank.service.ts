@@ -2,14 +2,25 @@
  * @fileoverview Tank Service
  * 
  * Handles business logic for tank operations including retrieval,
- * and synchronization between Supabase and on-chain data.
+ * capacity validation, and synchronization between Supabase and on-chain data.
+ * 
+ * Tank Capacity Validation:
+ * - Tank capacity is stored on-chain
+ * - Fish count per tank is tracked via tank_id in the fish table
+ * - checkTankCapacity() validates before adding new fish
+ * - ConflictError is thrown if tank would exceed capacity
+ * 
+ * Fish-Tank Relationship:
+ * - Fish are assigned to tanks via fish.tank_id foreign key
+ * - getTankById() retrieves fish by tank_id (not owner)
+ * - getTanksByOwner() calculates accurate fish count per tank
  */
 
 // ============================================================================
 // IMPORTS
 // ============================================================================
 
-import { ValidationError, NotFoundError, OnChainError } from '@/core/errors';
+import { ValidationError, NotFoundError, OnChainError, ConflictError } from '@/core/errors';
 import { getSupabaseClient } from '@/core/utils/supabase-client';
 import { logError } from '@/core/utils/logger';
 import { getTankOnChain } from '@/core/utils/dojo-client';
@@ -24,6 +35,126 @@ import type { FishSummary } from '@/models/fish.model';
  * Service for managing tank data and operations.
  */
 export class TankService {
+
+  // ============================================================================
+  // TANK CAPACITY VALIDATION
+  // ============================================================================
+
+  /**
+   * Validates that a tank has available capacity for new fish.
+   * 
+   * Capacity rules:
+   * - Each tank has a maximum capacity defined on-chain
+   * - Fish count is tracked via tank_id in the fish table
+   * - If fishCount >= capacity, throws ConflictError
+   * 
+   * @param tankId - Tank ID to check capacity for
+   * @param additionalFish - Number of fish to add (default: 1)
+   * @throws {ValidationError} If tankId is invalid
+   * @throws {NotFoundError} If tank doesn't exist
+   * @throws {ConflictError} If tank is at or would exceed capacity
+   * @throws {OnChainError} If on-chain data retrieval fails
+   */
+  async checkTankCapacity(tankId: number, additionalFish: number = 1): Promise<void> {
+    // Validate tankId
+    if (!tankId || tankId <= 0 || !Number.isInteger(tankId)) {
+      throw new ValidationError('Invalid tank ID');
+    }
+
+    if (additionalFish <= 0 || !Number.isInteger(additionalFish)) {
+      throw new ValidationError('Additional fish count must be a positive integer');
+    }
+
+    const supabase = getSupabaseClient();
+
+    // 1. Verify tank exists in Supabase
+    const { data: tankOffChain, error: tankError } = await supabase
+      .from('tanks')
+      .select('id')
+      .eq('id', tankId)
+      .single();
+
+    if (tankError) {
+      if (tankError.code === 'PGRST116') {
+        throw new NotFoundError(`Tank with ID ${tankId} not found`);
+      }
+      throw new Error(`Database error: ${tankError.message}`);
+    }
+
+    if (!tankOffChain) {
+      throw new NotFoundError(`Tank with ID ${tankId} not found`);
+    }
+
+    // 2. Get tank capacity from on-chain data
+    let tankOnChain;
+    try {
+      tankOnChain = await getTankOnChain(tankId);
+    } catch (error) {
+      logError(`Failed to get on-chain data for tank ${tankId}`, error);
+      throw new OnChainError(
+        `Failed to retrieve on-chain data for tank ${tankId}: ${error instanceof Error ? error.message : 'Unknown error'}`
+      );
+    }
+
+    const capacity = tankOnChain.capacity;
+
+    // 3. Count current fish in tank
+    const { count: fishCount, error: countError } = await supabase
+      .from('fish')
+      .select('id', { count: 'exact', head: true })
+      .eq('tank_id', tankId);
+
+    if (countError) {
+      throw new Error(`Database error counting fish: ${countError.message}`);
+    }
+
+    const currentFishCount = fishCount ?? 0;
+
+    // 4. Check if adding fish would exceed capacity
+    if (currentFishCount + additionalFish > capacity) {
+      throw new ConflictError(
+        `Tank ${tankId} is at capacity (${currentFishCount}/${capacity}). Cannot add ${additionalFish} more fish.`
+      );
+    }
+  }
+
+  /**
+   * Gets the first tank ID for a given owner.
+   * 
+   * Used when we need to assign fish to a tank and don't have a specific tank ID.
+   * Returns the first tank (by ID) owned by the player.
+   * 
+   * @param owner - Owner's Starknet wallet address
+   * @returns Tank ID or null if owner has no tanks
+   * @throws {ValidationError} If owner address is invalid
+   */
+  async getFirstTankIdByOwner(owner: string): Promise<number | null> {
+    // Validate address
+    if (!owner || owner.trim().length === 0) {
+      throw new ValidationError('Owner address is required');
+    }
+
+    const supabase = getSupabaseClient();
+    const trimmedOwner = owner.trim();
+
+    const { data: tank, error } = await supabase
+      .from('tanks')
+      .select('id')
+      .eq('owner', trimmedOwner)
+      .order('id', { ascending: true })
+      .limit(1)
+      .single();
+
+    if (error) {
+      if (error.code === 'PGRST116') {
+        // No tanks found for this owner
+        return null;
+      }
+      throw new Error(`Database error: ${error.message}`);
+    }
+
+    return tank?.id ?? null;
+  }
 
   // ============================================================================
   // TANK RETRIEVAL
@@ -79,16 +210,14 @@ export class TankService {
       );
     }
 
-    // 3. Get fish list for this owner
-    // Since we don't have tank_id in fish table yet, we assume all fish of the owner are in their tank
-    // (Simplification for now based on current schema)
+    // 3. Get fish list for this tank using tank_id
     const { data: fishList, error: fishError } = await supabase
       .from('fish')
       .select('*')
-      .eq('owner', tankOffChain.owner);
+      .eq('tank_id', id);
 
     if (fishError) {
-      logError(`Failed to get fish list for tank owner ${tankOffChain.owner}`, fishError);
+      logError(`Failed to get fish list for tank ${id}`, fishError);
       // Return empty array if error occurs
     }
 
@@ -100,6 +229,7 @@ export class TankService {
       species: string;
       image_url: string;
       created_at: string;
+      tank_id: number | null;
     };
 
     const fish: FishSummary[] = (fishList || []).map((f: SupabaseFishRow) => ({
@@ -108,6 +238,7 @@ export class TankService {
       species: f.species,
       imageUrl: f.image_url,
       createdAt: new Date(f.created_at),
+      tankId: f.tank_id ?? undefined,
     }));
 
     // 4. Combine data
@@ -190,17 +321,24 @@ export class TankService {
       return [];
     }
 
-    // 3. Get fish count for this owner (simplified: all fish belong to the owner's tanks)
-    const { data: fishList, error: fishError } = await supabase
+    // 3. Get fish count per tank using tank_id
+    // Query fish grouped by tank_id
+    const { data: fishCounts, error: fishError } = await supabase
       .from('fish')
-      .select('id')
+      .select('tank_id')
       .eq('owner', trimmedAddress);
 
     if (fishError) {
-      logError(`Failed to get fish count for owner ${trimmedAddress}`, fishError);
+      logError(`Failed to get fish counts for owner ${trimmedAddress}`, fishError);
     }
 
-    const totalFishCount = fishList?.length || 0;
+    // Build a map of tank_id -> fish count
+    const fishCountByTank: Record<number, number> = {};
+    for (const fish of (fishCounts || [])) {
+      if (fish.tank_id !== null) {
+        fishCountByTank[fish.tank_id] = (fishCountByTank[fish.tank_id] || 0) + 1;
+      }
+    }
 
     // Data type for Supabase tank row
     type TankRow = {
@@ -221,11 +359,8 @@ export class TankService {
       const tanksList = tanksOffChain.map((tankOffChain: TankRow, index: number) => {
         const tankOnChain = tanksOnChainList[index];
 
-        // Simplified: distribute fish count evenly across tanks
-        // In a real scenario, fish table would have tank_id field
-        const fishCount = tanksOffChain.length > 0
-          ? Math.floor(totalFishCount / tanksOffChain.length) + (index === 0 ? totalFishCount % tanksOffChain.length : 0)
-          : 0;
+        // Get fish count for this specific tank using tank_id
+        const fishCount = fishCountByTank[tankOffChain.id] || 0;
 
         const capacityUsage = tankOnChain.capacity > 0
           ? Number((fishCount / tankOnChain.capacity).toFixed(2))

@@ -22,6 +22,7 @@ export interface FishOffChain {
   species: string;
   imageUrl: string;
   createdAt: Date;
+  tankId?: number; // Reference to the tank this fish belongs to
 }
 
 export interface Fish extends FishOnChain, Omit<FishOffChain, 'id'> {
@@ -42,6 +43,7 @@ export interface CreateFishDto {
   owner: string;
   species: string;
   imageUrl: string;
+  tankId?: number; // Reference to the tank this fish belongs to
 }
 
 export interface UpdateFishDto {
