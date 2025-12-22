@@ -5,7 +5,7 @@
  */
 
 import type { FastifyInstance, FastifyPluginOptions } from 'fastify';
-import { getDecorationById, getDecorationsByOwner, activateDecoration } from '@/controllers/decoration.controller';
+import { getDecorationById, getDecorationsByOwner, activateDecoration, deactivateDecoration } from '@/controllers/decoration.controller';
 
 /**
  * Registers decoration routes with the Fastify instance.
@@ -25,4 +25,7 @@ export async function decorationRoutes(
 
   // POST /decoration/:id/activate - Activate a decoration
   app.post('/decoration/:id/activate', activateDecoration);
+
+  // POST /decoration/:id/deactivate - Deactivate a decoration
+  app.post('/decoration/:id/deactivate', deactivateDecoration);
 }
